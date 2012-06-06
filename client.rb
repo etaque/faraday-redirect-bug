@@ -1,14 +1,22 @@
-require 'faraday'
+require 'minitest/spec'
+require 'minitest/autorun'
 require 'faraday_middleware'
 
-connection = Faraday.new('http://localhost:4567') do |builder|
-  builder.response :follow_redirects
+require './app'
 
-  builder.request :url_encoded
-  builder.request :multipart
+describe 'FaradayMiddleware FollowRedirects' do
+  before do
+    @connection = Faraday.new('http://localhost:4567') do |builder|
+      builder.response :follow_redirects
+      builder.request :url_encoded
+      builder.request :multipart
+      builder.adapter :net_http
+    end
+  end
 
-  builder.adapter :net_http
+  let(:response) { @connection.post '/foo', {:file => Faraday::UploadIO.new('file.txt', 'text/plain')} } 
+
+  it 'should redirect' do
+    response.env[:url].to_s.must_equal 'http://localhost:4567/bar'
+  end
 end
-
-response = connection.post '/foo', {:file => Faraday::UploadIO.new('file.txt', 'text/plain')}
-puts response.body
